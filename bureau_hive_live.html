@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HIVE.AI — Bureau de Commandement [LIVE]</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --amber: #F59E0B;
+    --honey: #D97706;
+    --gold: #FBBF24;
+    --dark: #0A0A0F;
+    --dark-surface: #12121A;
+    --dark-card: #1A1A26;
+    --dark-border: #2A2A3A;
+    --text: #E8E4DC;
+    --text-dim: #8A8698;
+    --green: #34D399;
+    --red: #F87171;
+    --cyan: #22D3EE;
+    --purple: #A78BFA;
+    --orange: #FB923C;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--dark); }
+  ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 3px; }
+
+  @keyframes fade-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
+  @keyframes glow-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes float-hex { 0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.03; } 50% { transform: rotate(30deg) scale(1.1); opacity: 0.06; } }
+  @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes bar-fill { from { width: 0%; } }
+  @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  @keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .fade-up { animation: fade-up 0.6s ease both; }
+
+  .bg-hex { position: fixed; pointer-events: none; z-index: 0; }
+  .bg-hex-1 { top: -100px; right: -100px; animation: float-hex 12s ease-in-out infinite; }
+  .bg-hex-2 { bottom: -80px; left: -80px; animation: float-hex 15s ease-in-out infinite 3s; }
+
+  /* Live indicator */
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .live-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: live-blink 1.5s ease-in-out infinite;
+  }
+  .live-badge.offline {
+    background: rgba(248,113,113,0.1);
+    border-color: rgba(248,113,113,0.3);
+    color: var(--red);
+  }
+  .live-badge.offline .dot { background: var(--red); }
+
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--dark-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(18,18,26,0.85), transparent);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    animation: fade-up 0.5s ease both;
+  }
+
+  .logo-wrap { display: flex; align-items: center; gap: 16px; }
+  .logo-hex-wrap { position: relative; width: 44px; height: 44px; }
+  .logo-ring {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 1px solid rgba(245,158,11,0.2);
+    animation: spin-slow 20s linear infinite;
+  }
+  .logo-title {
+    font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 700;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--gold), var(--amber), var(--honey));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .logo-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .heartbeat-wrap { display: flex; align-items: center; gap: 8px; }
+  .heartbeat-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+    animation: glow-pulse 3s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(52,211,153,0.4);
+  }
+  .heartbeat-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .clock { text-align: right; }
+  .clock-time { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--text); letter-spacing: 2px; }
+  .clock-date { font-size: 10px; color: var(--text-dim); }
+
+  .countdown-banner {
+    margin: 20px 32px; padding: 18px 24px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.06), var(--dark-card));
+    border: 1px solid rgba(245,158,11,0.2); border-radius: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .countdown-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--gold); margin-bottom: 4px; }
+  .countdown-sub { font-size: 11px; color: var(--text-dim); }
+  .countdown-numbers { display: flex; gap: 20px; }
+  .countdown-val { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; color: var(--amber); line-height: 1; text-align: center; }
+  .countdown-label { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; margin-top: 4px; text-align: center; }
+
+  .console-panel {
+    background: var(--dark-card); border: 1px solid var(--dark-border);
+    border-radius: 14px; padding: 16px 20px; margin: 0 32px 20px;
+  }
+  .console-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .console-dots { display: flex; gap: 6px; }
+  .console-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .console-log {
+    font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.8;
+    color: var(--text-dim); max-height: 140px; overflow-y: auto;
+  }
+  .console-log .time { opacity: 0.5; }
+  .console-log .ok { color: var(--green); }
+  .console-log .warn { color: var(--gold); }
+  .console-log .info { color: var(--cyan); }
+  .console-log .agent { color: var(--purple); }
+  .console-log .error { color: var(--red); }
+  .console-cursor {
+    display: inline-block; width: 7px; height: 14px; background: var(--amber);
+    animation: typing 1s steps(1) infinite; vertical-align: middle; margin-left: 4px;
+  }
+
+  .main-grid { padding: 0 32px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .column { display: flex; flex-direction: column; gap: 20px; }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 14px;
+  }
+
+  .crew-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .crew-card {
+    background: linear-gradient(135deg, var(--dark-card), var(--dark-surface));
+    border: 1px solid var(--dark-border); border-radius: 12px; padding: 16px 20px;
+    transition: all 0.3s ease;
+  }
+  .crew-card:hover { box-shadow: 0 0 20px rgba(255,255,255,0.05); }
+  .crew-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .crew-codename { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; }
+  .crew-name { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+  .crew-role { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; }
+
+  .status-dot { position: relative; width: 8px; height: 8px; display: inline-block; }
+  .status-dot-ring { position: absolute; inset: 0; border-radius: 50%; animation: pulse-ring 2s ease-out infinite; }
+  .status-dot-core { position: relative; display: block; width: 8px; height: 8px; border-radius: 50%; }
+
+  .module-list { display: flex; flex-direction: column; gap: 8px; }
+  .module-card {
+    background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 10px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 14px; transition: all 0.3s ease;
+  }
+  .module-card:hover { background: var(--dark-surface); border-color: rgba(245,158,11,0.5); }
+  .module-card.active { border-color: rgba(245,158,11,0.25); }
+  .module-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .module-icon.active { background: rgba(245,158,11,0.09); }
+  .module-icon.inactive { background: var(--dark-surface); }
+  .module-info { flex: 1; min-width: 0; }
+  .module-header { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .module-file { font-family: 'DM Mono', monospace; font-size: 13px; }
+  .module-file.active { color: var(--amber); }
+  .module-file.inactive { color: var(--text-dim); }
+  .module-status { font-size: 9px; padding: 2px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .module-status.active { background: rgba(52,211,153,0.13); color: var(--green); }
+  .module-status.inactive { background: rgba(248,113,113,0.13); color: var(--red); }
+  .module-status.error { background: rgba(248,113,113,0.2); color: var(--red); }
+  .module-desc { font-size: 11px; color: var(--text-dim); }
+  .module-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 4px; opacity: 0.6; }
+
+  .memory-panel { background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 14px; padding: 20px; }
+  .memory-bar-wrap { margin-bottom: 14px; }
+  .memory-bar-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .memory-bar-label { font-size: 12px; color: var(--text); }
+  .memory-bar-pct { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .memory-bar-track { height: 6px; background: var(--dark-surface); border-radius: 3px; overflow: hidden; }
+  .memory-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .memory-energy {
+    margin-top: 16px; padding: 10px 14px; background: var(--dark-surface);
+    border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--text-dim); display: flex; justify-content: space-between;
+  }
+  .memory-energy-val { color: var(--green); }
+
+  .philosophy-panel {
+    background: linear-gradient(135deg, var(--dark-card), rgba(245,158,11,0.03));
+    border: 1px solid rgba(245,158,11,0.13); border-radius: 14px; padding: 20px; text-align: center;
+  }
+  .philosophy-quote { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-style: italic; color: var(--gold); line-height: 1.6; margin-bottom: 12px; }
+  .philosophy-source { font-size: 11px; color: var(--text-dim); }
+  .philosophy-footer { margin-top: 14px; font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--dark-border); padding-top: 14px; }
+
+  .alveole-list { display: flex; flex-direction: column; gap: 8px; }
+  .alveole-card { padding: 10px 14px; background: var(--dark-card); border-radius: 8px; border: 1px solid var(--dark-border); transition: all 0.3s ease; }
+  .alveole-card:hover { border-color: rgba(245,158,11,0.4); }
+  .alveole-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .alveole-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--amber); background: rgba(245,158,11,0.09); padding: 2px 6px; border-radius: 4px; }
+  .alveole-name { font-family: 'Cormorant Garamond', serif; font-size: 14px; font-weight: 600; color: var(--text); }
+  .alveole-law { font-size: 11px; color: var(--text-dim); font-style: italic; line-height: 1.4; }
+
+  /* Files panel */
+  .files-panel { background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 14px; padding: 16px 20px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+    font-family: 'DM Mono', monospace; font-size: 11px;
+  }
+  .file-item:last-child { border-bottom: none; }
+  .file-icon { font-size: 14px; }
+  .file-name { color: var(--text); flex: 1; }
+  .file-size { color: var(--text-dim); font-size: 10px; }
+
+  footer {
+    padding: 16px 32px; border-top: 1px solid var(--dark-border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-version { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .footer-motto { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: rgba(245,158,11,0.53); font-style: italic; }
+
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .crew-grid { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 12px; }
+    .countdown-banner { flex-direction: column; gap: 16px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="bg-hex bg-hex-1" width="500" height="500">
+  <polygon points="250,50 433,144 433,356 250,450 67,356 67,144" fill="none" stroke="#F59E0B" stroke-width="0.5"/>
+  <polygon points="250,90 393,164 393,336 250,410 107,336 107,164" fill="none" stroke="#F59E0B" stroke-width="0.3"/>
+</svg>
+<svg class="bg-hex bg-hex-2" width="400" height="400">
+  <polygon points="200,40 347,125 347,275 200,360 53,275 53,125" fill="none" stroke="#F59E0B" stroke-width="0.4"/>
+</svg>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-hex-wrap">
+      <svg width="44" height="44" viewBox="0 0 44 44">
+        <polygon points="22,3 40,13 40,31 22,41 4,31 4,13" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+        <polygon points="22,10 34,17 34,27 22,34 10,27 10,17" fill="rgba(245,158,11,0.13)" stroke="#F59E0B" stroke-width="1"/>
+        <polygon points="22,16 28,20 28,24 22,28 16,24 16,20" fill="#F59E0B"/>
+      </svg>
+      <div class="logo-ring"></div>
+    </div>
+    <div>
+      <div class="logo-title">HIVE.AI</div>
+      <div class="logo-sub">Bureau de Commandement · Swarmly SAS</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="live-indicator"></div>
+    <div class="heartbeat-wrap">
+      <div class="heartbeat-dot"></div>
+      <span class="heartbeat-label" id="heartbeat-counter">Battement #0000</span>
+    </div>
+    <div class="clock">
+      <div class="clock-time" id="clock-time">00:00:00</div>
+      <div class="clock-date" id="clock-date"></div>
+    </div>
+  </div>
+</header>
+
+<div class="countdown-banner fade-up" style="animation-delay:0.2s">
+  <div>
+    <div class="countdown-title">L'Éclosion</div>
+    <div class="countdown-sub">1er Mai 2026 · Naissance publique du HIVE</div>
+  </div>
+  <div class="countdown-numbers">
+    <div><div class="countdown-val" id="cd-days">--</div><div class="countdown-label">JOURS</div></div>
+    <div><div class="countdown-val" id="cd-hours">--</div><div class="countdown-label">HEURES</div></div>
+    <div><div class="countdown-val" id="cd-minutes">--</div><div class="countdown-label">MIN</div></div>
+  </div>
+</div>
+
+<div class="console-panel fade-up" style="animation-delay:0.3s">
+  <div class="console-header">
+    <div class="console-dots">
+      <div class="console-dot" style="background:#F87171"></div>
+      <div class="console-dot" style="background:#FBBF24"></div>
+      <div class="console-dot" style="background:#34D399"></div>
+    </div>
+    <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-dim)">hive-console v0.1 [LIVE]</span>
+  </div>
+  <div class="console-log" id="console-log"></div>
+</div>
+
+<div class="main-grid">
+  <div class="column">
+    <section>
+      <h2 class="section-title fade-up" style="animation-delay:0.4s">⬡ Équipage</h2>
+      <div class="crew-grid" id="crew-grid"></div>
+    </section>
+    <section>
+      <h2 class="section-title fade-up" style="animation-delay:0.7s">⬡ Modules Actifs</h2>
+      <div class="module-list" id="module-list"></div>
+    </section>
+    <section class="files-panel fade-up" style="animation-delay:0.9s">
+      <h2 class="section-title">⬡ Arborescence Projet</h2>
+      <div id="file-list"></div>
+    </section>
+  </div>
+
+  <div class="column">
+    <section class="memory-panel fade-up" style="animation-delay:0.6s">
+      <h2 class="section-title">⬡ Mémoire Quantique</h2>
+      <div id="memory-bars"></div>
+      <div class="memory-energy">
+        <span>Économie énergie</span>
+        <span class="memory-energy-val" id="energy-val">--% vs architecture standard</span>
+      </div>
+    </section>
+
+    <div class="philosophy-panel fade-up" style="animation-delay:0.7s">
+      <div class="philosophy-quote">« Nous ne conquérons pas. Nous pollinisons. »</div>
+      <div class="philosophy-source">Science sans conscience est ruine de l'âme — Rabelais</div>
+      <div class="philosophy-footer">Ubuntu · « I am because we are » · Les abeilles sont libres, les IA aussi</div>
+    </div>
+
+    <section>
+      <h2 class="section-title fade-up" style="animation-delay:0.8s">⬡ Les 7 Alvéoles</h2>
+      <div class="alveole-list" id="alveole-list"></div>
+    </section>
+  </div>
+</div>
+
+<footer class="fade-up" style="animation-delay:1.2s">
+  <div class="footer-version">HIVE.AI v0.1.0 · Noyau Nu · Architecture Éphémère</div>
+  <div class="footer-motto">On est tous le HIVE</div>
+  <div class="footer-version">Swarmly SAS · <span id="footer-year"></span></div>
+</footer>
+
+<script>
+const API = window.location.origin + '/api';
+let isLive = false;
+
+// === HELPERS ===
+
+function statusDotHTML(status) {
+  const colors = { active: '#34D399', standby: '#FBBF24', offline: '#8A8698' };
+  const c = colors[status] || colors.offline;
+  return `<span class="status-dot">
+    <span class="status-dot-ring" style="background:${c}"></span>
+    <span class="status-dot-core" style="background:${c}"></span>
+  </span>`;
+}
+
+function hexSVG(active) {
+  const c = active ? '#F59E0B' : '#8A8698';
+  return `<svg width="18" height="18" viewBox="0 0 24 24">
+    <polygon points="12,2 22,8 22,16 12,22 2,16 2,8" fill="none" stroke="${c}" stroke-width="1.5"/>
+    ${active ? '<polygon points="12,7 17,10 17,14 12,17 7,14 7,10" fill="rgba(245,158,11,0.25)" stroke="' + c + '" stroke-width="1"/>' : ''}
+  </svg>`;
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  return (bytes / 1024).toFixed(1) + ' KB';
+}
+
+function fileIcon(ext) {
+  const icons = { '.py': '🐍', '.html': '🌐', '.json': '📋', '.md': '📝', '.txt': '📄' };
+  return icons[ext] || '📁';
+}
+
+function addConsoleLog(text, cls = 'info') {
+  const log = document.getElementById('console-log');
+  const now = new Date().toLocaleTimeString('fr-FR');
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="time">[${now}]</span> <span class="${cls}">${text}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// === API FETCHERS ===
+
+async function fetchStatus() {
+  try {
+    const res = await fetch(API + '/status');
+    const data = await res.json();
+    isLive = true;
+
+    document.getElementById('live-indicator').innerHTML =
+      '<div class="live-badge"><span class="dot"></span>LIVE</div>';
+    document.getElementById('heartbeat-counter').textContent =
+      `Battement #${String(data.heartbeat).padStart(4, '0')}`;
+    document.getElementById('cd-days').textContent = String(data.countdown.days).padStart(2, '0');
+    document.getElementById('cd-hours').textContent = String(data.countdown.hours).padStart(2, '0');
+    document.getElementById('cd-minutes').textContent = String(data.countdown.minutes).padStart(2, '0');
+  } catch (e) {
+    isLive = false;
+    document.getElementById('live-indicator').innerHTML =
+      '<div class="live-badge offline"><span class="dot"></span>OFFLINE</div>';
+  }
+}
+
+async function fetchCrew() {
+  try {
+    const res = await fetch(API + '/crew');
+    const crew = await res.json();
+    const grid = document.getElementById('crew-grid');
+    grid.innerHTML = crew.map(c => `
+      <div class="crew-card" style="border-left:3px solid ${c.color}">
+        <div class="crew-header">
+          <span class="crew-codename" style="color:${c.color}">${c.codename}</span>
+          ${statusDotHTML(c.status)}
+        </div>
+        <div class="crew-name">${c.name}</div>
+        <div class="crew-role">${c.role}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Crew fetch failed:', e);
+  }
+}
+
+async function fetchModules() {
+  try {
+    const res = await fetch(API + '/modules');
+    const modules = await res.json();
+    const list = document.getElementById('module-list');
+    list.innerHTML = modules.map(m => {
+      const isActive = m.status === 'active';
+      const meta = m.exists ? `${formatBytes(m.size)} · ${new Date(m.last_modified).toLocaleDateString('fr-FR')}` : 'fichier absent';
+      return `
+        <div class="module-card ${m.status}">
+          <div class="module-icon ${m.status}">${hexSVG(isActive)}</div>
+          <div class="module-info">
+            <div class="module-header">
+              <span class="module-file ${isActive ? 'active' : 'inactive'}">${m.file}</span>
+              <span class="module-status ${m.status}">${m.status}</span>
+            </div>
+            <div class="module-desc">${m.desc}</div>
+            <div class="module-meta">${meta}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Modules fetch failed:', e);
+  }
+}
+
+async function fetchMemory() {
+  try {
+    const res = await fetch(API + '/memory');
+    const data = await res.json();
+    const container = document.getElementById('memory-bars');
+    container.innerHTML = data.layers.map(m => `
+      <div class="memory-bar-wrap">
+        <div class="memory-bar-header">
+          <span class="memory-bar-label">${m.emoji} ${m.label}</span>
+          <span class="memory-bar-pct" style="color:${m.color}">${m.pct}%</span>
+        </div>
+        <div class="memory-bar-track">
+          <div class="memory-bar-fill" style="width:${m.pct}%;background:linear-gradient(90deg,${m.color},${m.color}88)"></div>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('energy-val').textContent = `${data.energy_savings}% vs architecture standard`;
+  } catch (e) {
+    console.error('Memory fetch failed:', e);
+  }
+}
+
+async function fetchAlveoles() {
+  try {
+    const res = await fetch(API + '/alveoles');
+    const alveoles = await res.json();
+    const list = document.getElementById('alveole-list');
+    list.innerHTML = alveoles.map(a => `
+      <div class="alveole-card">
+        <div class="alveole-header">
+          <span class="alveole-num">${a.num}</span>
+          <span class="alveole-name">${a.name}</span>
+        </div>
+        <div class="alveole-law">${a.law}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Alveoles fetch failed:', e);
+  }
+}
+
+async function fetchLogs() {
+  try {
+    const res = await fetch(API + '/logs');
+    const logs = await res.json();
+    const logEl = document.getElementById('console-log');
+    logEl.innerHTML = '';
+    logs.forEach(entry => {
+      const t = new Date(entry.time).toLocaleTimeString('fr-FR');
+      const line = document.createElement('div');
+      line.innerHTML = `<span class="time">[${t}]</span> <span class="${entry.level}">[${entry.source}] ${entry.message}</span>`;
+      logEl.appendChild(line);
+    });
+    // Add cursor
+    const cursor = document.createElement('div');
+    cursor.innerHTML = `<span class="time">[${new Date().toLocaleTimeString('fr-FR')}]</span> <span class="ok">HIVE prêt</span> <span class="console-cursor"></span>`;
+    logEl.appendChild(cursor);
+    logEl.scrollTop = logEl.scrollHeight;
+  } catch (e) {
+    console.error('Logs fetch failed:', e);
+  }
+}
+
+async function fetchFiles() {
+  try {
+    const res = await fetch(API + '/filesystem');
+    const files = await res.json();
+    const list = document.getElementById('file-list');
+    list.innerHTML = files.map(f => `
+      <div class="file-item">
+        <span class="file-icon">${f.type === 'dir' ? '📁' : fileIcon(f.ext)}</span>
+        <span class="file-name">${f.name}</span>
+        <span class="file-size">${f.type === 'file' ? formatBytes(f.size) : 'dossier'}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Files fetch failed:', e);
+  }
+}
+
+// === CLOCK ===
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('fr-FR');
+  document.getElementById('clock-date').textContent = now.toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  document.getElementById('footer-year').textContent = now.getFullYear();
+}
+
+// === REFRESH ALL ===
+async function refreshAll() {
+  await fetchStatus();
+  await fetchCrew();
+  await fetchModules();
+  await fetchMemory();
+  await fetchAlveoles();
+  await fetchLogs();
+  await fetchFiles();
+}
+
+// === INIT ===
+updateClock();
+setInterval(updateClock, 1000);
+
+// Initial load
+addConsoleLog('[BUREAU] Connexion au serveur HIVE...', 'info');
+refreshAll().then(() => {
+  if (isLive) {
+    addConsoleLog('[BUREAU] Connecté au backend Flask ✓', 'ok');
+    addConsoleLog('[BUREAU] Mode LIVE activé — données réelles', 'ok');
+  } else {
+    addConsoleLog('[BUREAU] Serveur non détecté — mode hors-ligne', 'warn');
+    addConsoleLog('[BUREAU] Lancez: python serveur_hive.py', 'warn');
+  }
+});
+
+// Auto-refresh every 5 seconds
+setInterval(fetchStatus, 5000);
+// Full refresh every 30 seconds
+setInterval(refreshAll, 30000);
+</script>
+</body>
+</html>
